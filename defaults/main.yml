@@ -22,7 +22,8 @@ sentry_allow_registration: true
 sentry_email_host: smtp.exmail.qq.com
 sentry_email_user: sentry@risewinter.com
 sentry_email_password: password
-sentry_email_port: 465
+sentry_email_port: 587
+# by default we use tls protocal
 
 sentry_image: sentry:8.10
 sentry_postgres_image: postgres:9.5
