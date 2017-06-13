@@ -1,0 +1,30 @@
+---
+sentry_upgrade: false
+sentry_install: false
+sentry_home: /home/{{ ansible_user_id }}/sentry
+sentry_conf_dir: "{{ sentry_home }}/conf"
+sentry_postgres_data_dir: "{{ sentry_home }}/postgres"
+sentry_redis_memory: 1gb
+sentry_force_restart: false
+sentry_web_port: 3000
+# sentry_docker_uid:
+
+sentry_db_username: sentry
+sentry_db_password: sentry
+sentry_secret: "$t8+aojza-30%*p@8k2#4fy76*aamuanc^q$h&t2tzny@y+sgp"
+sentry_admin_email: admin@example.com
+sentry_admin_password: password
+sentry_server_email: sentry@example.com
+sentry_time_zone: "Asia/Singapore"
+sentry_allow_registration: true
+
+# smtp server
+sentry_email_host: smtp.exmail.qq.com
+sentry_email_user: sentry@risewinter.com
+sentry_email_password: password
+sentry_email_port: 465
+
+sentry_image: sentry:8.10
+sentry_postgres_image: postgres:9.5
+sentry_redis_image: redis:3.2.6
+sentry_docker_run: docker run --rm -e SENTRY_SECRET_KEY='{{ sentry_secret }}' --link sentry-postgres:postgres --link sentry-redis:redis -i {{ sentry_image }}

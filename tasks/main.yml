@@ -1,0 +1,102 @@
+---
+
+- include: docker.yml
+
+- name: create conf and data directories
+  file: path={{ item }} state=directory
+  with_items:
+    - "{{ sentry_conf_dir }}"
+    - "{{ sentry_postgres_data_dir }}"
+
+- name: set data dir permission
+  acl:
+    name: "{{ sentry_postgres_data_dir }}"
+    entity: "{{ sentry_docker_uid }}"
+    etype: user
+    permissions: rwx
+    state: present
+  when: sentry_docker_uid is defined 
+
+- name: copy conf
+  template: src={{ item }} dest={{ sentry_conf_dir }}/{{ item | regex_replace('\\.j2', '') }}
+  with_items:
+    - sentry.conf.py.j2
+    - redis.conf.j2
+  register: copy_conf
+
+- name: run postgres
+  docker_container:
+    name: sentry-postgres
+    image: "{{ sentry_postgres_image }}"
+    restart_policy: always
+    volumes:
+      - "{{ sentry_postgres_data_dir }}:/postgres"
+    env:
+      POSTGRES_USER: "{{ sentry_db_username }}"
+      POSTGRES_PASSWORD: "{{ sentry_db_password }}"
+      PGDATA: /postgres/data
+  register: run_postgres
+
+- name: run redis
+  docker_container:
+    name: sentry-redis
+    image: "{{ sentry_redis_image }}"
+    restart_policy: always
+    volumes:
+      - "{{ sentry_conf_dir }}/redis.conf:/usr/local/etc/redis/redis.conf"
+    restart: "{{ copy_conf.changed }}"
+  register: run_redis
+
+- name: wait for components to start up
+  pause: seconds=5
+  when: sentry_install
+
+- name: upgrade db
+  when: sentry_upgrade or sentry_install
+  shell: >
+    echo "n\n"
+    | sed 's/\\n/\n/g'
+    | {{ sentry_docker_run }} upgrade
+
+- name: create admin user
+  when: sentry_install
+  shell: >
+    echo "{{ sentry_admin_email }}\n{{ sentry_admin_password }}\n{{ sentry_admin_password }}\ny\n"
+    | sed 's/\\n/\n/g'
+    | {{ sentry_docker_run }} createuser
+
+- name: run sentry
+  docker_container:
+    name: "{{ item.name }}"
+    image: "{{ sentry_image }}"
+    restart_policy: always
+    links:
+      - "sentry-redis:redis"
+      - "sentry-postgres:postgres"
+    ports: "{{ item.ports | default([]) }}"
+    volumes:
+      - "{{ sentry_conf_dir }}/sentry.conf.py:/etc/sentry/sentry.conf.py"
+    env:
+      SENTRY_SECRET_KEY: "{{ sentry_secret }}"
+      SENTRY_SERVER_EMAIL: "{{ sentry_server_email }}"
+      SENTRY_EMAIL_USER: "{{ sentry_email_user }}"
+      SENTRY_EMAIL_HOST: "{{ sentry_email_host }}"
+      SENTRY_EMAIL_PASSWORD: "{{ sentry_email_password }}"
+      SENTRY_EMAIL_PORT: "{{ sentry_email_port }}"
+    command: ["run", "{{ item.command }}"]
+    restart: "{{ copy_conf.changed or sentry_force_restart }}"
+    recreate: "{{ run_postgres.changed or run_redis.changed}}"
+  with_items:
+    - name: sentry-web
+      ports:
+        - "{{ sentry_web_port }}:9000"
+      command: web
+    - name: sentry-worker
+      command: worker
+    - name: sentry-cron
+      command: cron
+
+- name: add cron job to perform cleanup
+  cron: name="sentry cleanup" minute=0 hour=1 job="docker exec -i sentry-web sentry cleanup"
+  tags:
+    - cleanup
