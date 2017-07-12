@@ -1,4 +1,4 @@
-Role Name
+Ansible Sentry
 =========
 
 A easy installation for sentry service
@@ -13,6 +13,15 @@ Requirements
 
 Please add the user in the controlled matchine to the "docker" group, otherwise postgres, redis needs to be installed by sudo user
 
+#Add docker group
+`sudo groupadd docker`
+
+#Add user to docker group
+`sudo usermod -aG docker $USER`
+
+#REMIND to start docker daemon
+`sudo systemctl statrt docker`
+
 Role Variables
 --------------
 
@@ -21,7 +30,8 @@ A description of the settable variables for this role should go here, including 
 Dependencies
 ------------
 
-A list of other roles hosted on Galaxy should go here, plus any details in regards to parameters that may need to be set for other roles, or variables that are used from other roles.
+Pleaase make sure docker is installed on your target remote machine
+[Install docker ce on Cent-OS](https://docs.docker.com/engine/installation/linux/docker-ce/centos/#install-using-the-repository)
 
 Example Playbook
 ----------------

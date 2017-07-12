@@ -58,12 +58,12 @@
     | sed 's/\\n/\n/g'
     | {{ sentry_docker_run }} upgrade
 
-# - name: create admin user
-#   when: sentry_install
-#   shell: >
-#     echo "{{ sentry_admin_email }}\n{{ sentry_admin_password }}\n{{ sentry_admin_password }}\ny\n"
-#     | sed 's/\\n/\n/g'
-#     | {{ sentry_docker_run }} createuser
+- name: create admin user
+  when: sentry_install
+  shell: >
+    echo "{{ sentry_admin_email }}\n{{ sentry_admin_password }}\n{{ sentry_admin_password }}\ny\n"
+    | sed 's/\\n/\n/g'
+    | {{ sentry_docker_run }} createuser
 
 - name: run sentry
   docker_container:
